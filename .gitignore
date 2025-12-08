@@ -1,0 +1,16 @@
+.env
+*.pyc
+__pycache__/
+venv/
+.venv/
+*.log
+.wwebjs_auth/
+.wwebjs_cache/
+node_modules/
+data/*.csv
+*.db
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
