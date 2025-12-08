@@ -1,0 +1,17 @@
+[Unit]
+Description=Retail Arbitrage Bot - Sistema de Búsqueda Automatizada
+After=network.target
+
+[Service]
+Type=simple
+User=tu-usuario
+WorkingDirectory=/home/tu-usuario/retail-arbitrage-bot
+ExecStart=/usr/bin/python3 /home/tu-usuario/retail-arbitrage-bot/main.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment="PATH=/home/tu-usuario/retail-arbitrage-bot/venv/bin"
+
+[Install]
+WantedBy=multi-user.target
