@@ -1,157 +1,100 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Retail Arbitrage Bot - Sistema Principal
-Monitorea tiendas retail, analiza productos y envía notificaciones
+Retail Arbitrage Bot - Kivy UI
 """
 
 import os
 import sys
-import time
-import logging
-import schedule
-from datetime import datetime
-from dotenv import load_dotenv
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.core.window import Window
+from kivy.logger import Logger
+import threading
 
-from scraper import RetailScraper
-from analyzer import ProductAnalyzer
-from notifier import send_email_notification, send_whatsapp_notification
+from backend import run_search_and_analyze
 
-# Cargar variables de entorno
-load_dotenv()
+class RetailArbitrageApp(App):
 
-# Configurar logging
-logging.basicConfig(
-    level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO')),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(os.getenv('LOG_FILE', 'retail_arbitrage.log')),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
+    def build(self):
+        self.title = 'Retail Arbitrage Bot'
+        Window.clearcolor = (0.1, 0.1, 0.1, 1)
 
+        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-def run_search_and_analyze():
-    """Ejecuta búsqueda, análisis y notificaciones"""
-    try:
-        logger.info("=" * 80)
-        logger.info("INICIANDO CICLO DE BÚSQUEDA Y ANÁLISIS")
-        logger.info("=" * 80)
-        
-        # Obtener configuración
-        query = os.getenv('SEARCH_QUERY', 'sidra').split(',')
-        stores = os.getenv('STORES', 'walmart,liverpool').split(',')
-        min_discount = int(os.getenv('MIN_DISCOUNT', '30'))
-        max_price = float(os.getenv('MAX_PRICE', '500'))
-        
-        logger.info(f"Buscando productos: {', '.join(query)}")
-        logger.info(f"Tiendas: {', '.join(stores)}")
-        logger.info(f"Criterios: Descuento ≥30%, Precio ≤${max_price}")
-        
-        scraper = RetailScraper()
-        
-        # Scraping de cada tienda
-        for store in stores:
-            store = store.strip()
-            for search_term in query:
-                search_term = search_term.strip()
-                logger.info(f"Scraping {store} para: {search_term}")
-                
-                if store == 'walmart':
-                    scraper.scrape_walmart(search_term, min_discount, max_price)
-                elif store == 'liverpool':
-                    scraper.scrape_liverpool(search_term, min_discount, max_price)
-                elif store == 'chedraui':
-                    scraper.scrape_chedraui(search_term, min_discount, max_price)
-                
-                time.sleep(int(os.getenv('REQUEST_DELAY', '2')))
-        
-        # Guardar resultados
-        if scraper.results:
-            scraper.save_results('data/productos_encontrados.csv')
-            logger.info(f"✅ Productos encontrados: {len(scraper.results)}")
-        else:
-            logger.warning("⚠ No se encontraron productos")
-            return
-        
-        # Analizar productos
-        logger.info("Analizando productos encontrados...")
-        analyzer = ProductAnalyzer()
-        approved_products = []
-        
-        for product in scraper.results:
-            is_approved, analysis = analyzer.analyze_product(product)
-            if is_approved:
-                product.update(analysis)
-                approved_products.append(product)
-        
-        logger.info(f"✅ Productos aprobados: {len(approved_products)}")
-        
-        # Guardar y notificar
-        if approved_products:
-            analyzer.save_approved_products(approved_products, 'data/productos_aprobados.csv')
-            
-            logger.info("Enviando notificaciones...")
-            
-            # Email
-            if send_email_notification(os.getenv('NOTIFY_EMAIL'), approved_products):
-                logger.info("✅ Email enviado")
-            else:
-                logger.error("✗ Error al enviar email")
-            
-            # WhatsApp
-            if send_whatsapp_notification(os.getenv('NOTIFY_PHONE'), approved_products):
-                logger.info("✅ WhatsApp enviado")
-            else:
-                logger.error("✗ Error al enviar WhatsApp")
-        
-        logger.info("=" * 80)
-        logger.info("CICLO COMPLETADO")
-        logger.info("=" * 80)
-        
-    except Exception as e:
-        logger.error(f"Error en el ciclo: {e}", exc_info=True)
+        # Title
+        title_label = Label(text='Retail Arbitrage Bot', font_size='24sp', bold=True, size_hint_y=None, height=50)
+        layout.add_widget(title_label)
 
+        # --- Configuration ---
+        config_layout = GridLayout(cols=2, spacing=10, size_hint_y=None, height=200)
 
-def main():
-    """Función principal"""
-    logger.info("""
-    ════════════════════════════════════════
-    RETAIL ARBITRAGE BOT - MÉXICO
-    Sistema Automatizado de Búsqueda y Análisis
-    ════════════════════════════════════════
-    """)
-    
-    # Verificar variables de entorno
-    required_vars = ['GMAIL_USER', 'GMAIL_APP_PASSWORD', 'NOTIFY_EMAIL']
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
-    if missing_vars:
-        logger.error(f"Variables faltantes: {', '.join(missing_vars)}")
-        sys.exit(1)
-    
-    os.makedirs('data', exist_ok=True)
-    
-    # Ejecutar inmediatamente
-    logger.info("Ejecutando búsqueda inicial...")
-    run_search_and_analyze()
-    
-    # Programar ejecuciones
-    interval_hours = int(os.getenv('CHECK_INTERVAL_HOURS', '6'))
-    logger.info(f"Programando ejecuciones cada {interval_hours} horas")
-    
-    schedule.every(interval_hours).hours.do(run_search_and_analyze)
-    
-    logger.info("Bot ejecutándose. Presiona Ctrl+C para detener.")
-    try:
-        while True:
-            schedule.run_pending()
-            time.sleep(60)
-    except KeyboardInterrupt:
-        logger.info("\nBot detenido")
-        sys.exit(0)
+        config_layout.add_widget(Label(text='Search Query:', halign='right'))
+        self.search_query = TextInput(text=os.getenv('SEARCH_QUERY', 'sidra,rompope'), multiline=False)
+        config_layout.add_widget(self.search_query)
+
+        config_layout.add_widget(Label(text='Stores:', halign='right'))
+        self.stores = TextInput(text=os.getenv('STORES', 'walmart,liverpool'), multiline=False)
+        config_layout.add_widget(self.stores)
+
+        config_layout.add_widget(Label(text='Min Discount (%):', halign='right'))
+        self.min_discount = TextInput(text=os.getenv('MIN_DISCOUNT', '30'), multiline=False)
+        config_layout.add_widget(self.min_discount)
+
+        config_layout.add_widget(Label(text='Max Price:', halign='right'))
+        self.max_price = TextInput(text=os.getenv('MAX_PRICE', '500'), multiline=False)
+        config_layout.add_widget(self.max_price)
+
+        layout.add_widget(config_layout)
+
+        # --- Controls ---
+        self.run_button = Button(text='Run Search', on_press=self.run_search_thread, size_hint_y=None, height=50)
+        layout.add_widget(self.run_button)
+
+        # --- Log Output ---
+        self.log_output = TextInput(text='Logs will appear here...\n', readonly=True, background_color=(0,0,0,1), foreground_color=(1,1,1,1))
+        log_scroll = ScrollView(size_hint=(1, 1))
+        log_scroll.add_widget(self.log_output)
+        layout.add_widget(log_scroll)
+
+        # Redirect stdout to log output
+        sys.stdout = self
+        sys.stderr = self
+
+        return layout
+
+    def write(self, s):
+        self.log_output.text += s
+        self.log_output.cursor = (0, len(self.log_output.text))
+
+    def flush(self):
+        pass
+
+    def run_search_thread(self, instance):
+        self.run_button.disabled = True
+        self.log_output.text = "Starting search...\n"
+        threading.Thread(target=self.run_search).start()
+
+    def run_search(self):
+        try:
+            # Update environment variables from UI
+            os.environ['SEARCH_QUERY'] = self.search_query.text
+            os.environ['STORES'] = self.stores.text
+            os.environ['MIN_DISCOUNT'] = self.min_discount.text
+            os.environ['MAX_PRICE'] = self.max_price.text
+
+            result = run_search_and_analyze()
+            self.log_output.text += f"Search finished: {result}\n"
+        except Exception as e:
+            self.log_output.text += f"Error: {e}\n"
+        finally:
+            self.run_button.disabled = False
 
 
 if __name__ == '__main__':
-    main()
+    RetailArbitrageApp().run()
