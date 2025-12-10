@@ -22,6 +22,19 @@ from backend import run_search_and_analyze
 class RetailArbitrageApp(App):
 
     def build(self):
+        """
+        Construye y configura la interfaz principal de la aplicación Kivy.
+        
+        Configura el título y el color de fondo de la ventana, crea el layout raíz y los controles de la UI:
+        - etiqueta de título,
+        - sección de configuración con campos de texto para búsqueda, tiendas, descuento mínimo y precio máximo (prellenados desde variables de entorno si están disponibles),
+        - botón para iniciar la búsqueda,
+        - área de salida de logs dentro de un ScrollView.
+        Además redirige stdout y stderr hacia el widget de logs.
+        
+        Returns:
+        	layout_raiz (BoxLayout): El contenedor raíz que agrupa todos los widgets de la interfaz.
+        """
         self.title = 'Retail Arbitrage Bot'
         Window.clearcolor = (0.1, 0.1, 0.1, 1)
 
@@ -69,18 +82,42 @@ class RetailArbitrageApp(App):
         return layout
 
     def write(self, s):
+        """
+        Añade texto al área de registro de la interfaz y sitúa el cursor al final del contenido.
+        
+        Parameters:
+            s (str): Texto a añadir al log; puede contener saltos de línea y fragmentos parciales de salida.
+        """
         self.log_output.text += s
         self.log_output.cursor = (0, len(self.log_output.text))
 
     def flush(self):
+        """
+        No realiza ninguna acción; existe para cumplir la interfaz de objeto de archivo requerida al redirigir stdout/stderr a la aplicación.
+        
+        Se mantiene como método vacío para satisfacer la expectativa de que el objeto log tenga un método `flush`.
+        """
         pass
 
     def run_search_thread(self, instance):
+        """
+        Inicia la búsqueda en un hilo de fondo y prepara la interfaz de usuario para la ejecución.
+        
+        Deshabilita el botón de ejecución, reinicia el área de log con un mensaje inicial y arranca un hilo separado que invoca `run_search`.
+        
+        Parameters:
+        	instance: el objeto que disparó el evento (por ejemplo, el botón pulsado). No se utiliza dentro de la función.
+        """
         self.run_button.disabled = True
         self.log_output.text = "Starting search...\n"
         threading.Thread(target=self.run_search).start()
 
     def run_search(self):
+        """
+        Ejecuta la búsqueda y el análisis usando los valores actuales de la interfaz y registra el resultado en la salida de log.
+        
+        Actualiza las variables de entorno (SEARCH_QUERY, STORES, MIN_DISCOUNT, MAX_PRICE) con los valores presentes en los campos de la UI, invoca backend.run_search_and_analyze(), añade el resultado al área de log y, si ocurre una excepción, registra el mensaje de error. Siempre vuelve a habilitar el botón de ejecución al finalizar.
+        """
         try:
             # Update environment variables from UI
             os.environ['SEARCH_QUERY'] = self.search_query.text
