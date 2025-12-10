@@ -53,7 +53,16 @@ def send_email_notification(to_email, products):
 
 def send_whatsapp_notification(phone, products):
     """
-    Envía notificación por WhatsApp usando CallMeBot
+    Envía una notificación por WhatsApp a un número mediante la API de CallMeBot.
+    
+    Genera el texto del mensaje a partir de `products`, construye la URL de CallMeBot (incluyendo la clave API desde la variable de entorno `CALLMEBOT_APIKEY`) y realiza una petición HTTP GET para enviar el mensaje.
+    
+    Parameters:
+        phone (str): Número de teléfono destino en formato internacional (incluye código de país).
+        products (list): Lista de diccionarios con datos de los productos que se incluirán en el mensaje.
+    
+    Returns:
+        `true` si la petición recibió un HTTP 200 y el envío se considera exitoso, `false` en caso contrario.
     """
     try:
         if not phone or not products:

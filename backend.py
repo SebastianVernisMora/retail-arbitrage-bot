@@ -30,7 +30,18 @@ logger = logging.getLogger(__name__)
 
 
 def run_search_and_analyze():
-    """Ejecuta búsqueda, análisis y notificaciones"""
+    """
+    Orquesta un ciclo completo de búsqueda, análisis y notificación de productos en las tiendas configuradas.
+    
+    Lee la configuración desde variables de entorno, ejecuta scraping por tienda y término, guarda los resultados encontrados, analiza cada producto para determinar su aprobación, persiste los aprobados y envía notificaciones por email y WhatsApp cuando procede.
+    
+    Returns:
+    	estado (str): Mensaje de estado que puede ser:
+    		- "No se encontraron productos"
+    		- "No se encontraron productos aprobados."
+    		- "Proceso completado. Productos aprobados: <n>"
+    		- "Error: <mensaje>" en caso de excepciones.
+    """
     try:
         logger.info("=" * 80)
         logger.info("INICIANDO CICLO DE BÚSQUEDA Y ANÁLISIS")
