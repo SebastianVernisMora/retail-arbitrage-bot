@@ -53,8 +53,16 @@ def send_email_notification(to_email, products):
 
 def send_whatsapp_notification(phone, products):
     """
-    Envía notificación por WhatsApp
-    Requiere whatsapp-web.js ejecutándose
+    Envía una notificación por WhatsApp a un número mediante la API de CallMeBot.
+    
+    Genera el texto del mensaje a partir de `products`, construye la URL de CallMeBot (incluyendo la clave API desde la variable de entorno `CALLMEBOT_APIKEY`) y realiza una petición HTTP GET para enviar el mensaje.
+    
+    Parameters:
+        phone (str): Número de teléfono destino en formato internacional (incluye código de país).
+        products (list): Lista de diccionarios con datos de los productos que se incluirán en el mensaje.
+    
+    Returns:
+        `true` si la petición recibió un HTTP 200 y el envío se considera exitoso, `false` en caso contrario.
     """
     try:
         if not phone or not products:
@@ -64,11 +72,17 @@ def send_whatsapp_notification(phone, products):
         # Crear mensaje
         message = generate_whatsapp_message(products)
         
-        # Aquí iría la integración con whatsapp_sender.js
-        # Por ahora, solo log
-        logger.info(f"✅ WhatsApp preparado para {phone}")
-        return True
-    
+        # Enviar vía CallMeBot
+        url = f"https://api.callmebot.com/whatsapp.php?phone={phone}&text={message}&apikey={os.getenv('CALLMEBOT_APIKEY')}"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            logger.info(f"✅ WhatsApp enviado a {phone}")
+            return True
+        else:
+            logger.error(f"✗ Error enviando WhatsApp: {response.text}")
+            return False
+
     except Exception as e:
         logger.error(f"✗ Error enviando WhatsApp: {e}")
         return False
