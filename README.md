@@ -183,7 +183,7 @@ npm install
 **Sebastian Vernis Mora**
 
 - 🌐 GitHub: [@SebastianVernisMora](https://github.com/SebastianVernisMora)
-- 📧 Email: solucionesdigitales@outlook.com
+- 📧 Email: solucionesdigitalesdev@outlook.com
 - 📍 Ubicación: México
 
 ---
